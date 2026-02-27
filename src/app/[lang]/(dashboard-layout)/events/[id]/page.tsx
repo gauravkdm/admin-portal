@@ -6,6 +6,7 @@ import { db } from "@/lib/prisma"
 
 import { EventActions } from "./_components/event-actions"
 import { EventInfoCard } from "./_components/event-info-card"
+import { EventRevenueCard } from "./_components/event-revenue-card"
 import { GuestList } from "./_components/guest-list"
 import { MediaGallery } from "./_components/media-gallery"
 import { TicketSummary } from "./_components/ticket-summary"
@@ -42,6 +43,108 @@ async function getEvent(id: string) {
   return event
 }
 
+async function getEventFinancials(eventId: string) {
+  const [
+    revenueAgg,
+    ticketsSoldAgg,
+    freeTicketsCount,
+    paidTicketsCount,
+    promoDiscountAgg,
+    payout,
+    totalQrs,
+    scannedQrs,
+    purchases,
+    perTicketRevenue,
+  ] = await Promise.all([
+    db.purchasedTickets.aggregate({
+      where: { EventId: eventId, PaymentStatus: "captured" },
+      _sum: {
+        TotalAmount: true,
+        TotalAmountIncludingFees: true,
+        FeesAmount: true,
+        GstAmount: true,
+      },
+    }),
+    db.purchasedTickets.aggregate({
+      where: { EventId: eventId },
+      _sum: { TotalTickets: true },
+      _count: true,
+    }),
+    db.purchasedTickets.count({
+      where: { EventId: eventId, TotalAmount: 0 },
+    }),
+    db.purchasedTickets.count({
+      where: {
+        EventId: eventId,
+        PaymentStatus: "captured",
+        TotalAmount: { gt: 0 },
+      },
+    }),
+    db.purchasedTickets.aggregate({
+      where: { EventId: eventId },
+      _sum: { PromoCodeDiscountAmount: true },
+    }),
+    db.eventPayouts.findFirst({
+      where: { EventId: eventId },
+      orderBy: { RequestedAt: "desc" },
+    }),
+    db.purchasedTicketsQrs.count({
+      where: { PurchasedTickets: { EventId: eventId } },
+    }),
+    db.purchasedTicketsQrs.count({
+      where: { PurchasedTickets: { EventId: eventId }, IsScanned: true },
+    }),
+    db.purchasedTickets.findMany({
+      where: { EventId: eventId },
+      select: { UserId: true },
+    }),
+    db.purchasedTickets.groupBy({
+      by: ["TicketId"],
+      where: { EventId: eventId, PaymentStatus: "captured" },
+      _sum: { TotalAmount: true, TotalTickets: true },
+    }),
+  ])
+
+  const uniqueBuyers = new Set(purchases.map((p) => p.UserId)).size
+
+  const ticketRevenueMap = new Map(
+    perTicketRevenue.map((r) => [
+      r.TicketId,
+      {
+        revenue: Number(r._sum.TotalAmount ?? 0),
+        sold: r._sum.TotalTickets ?? 0,
+      },
+    ])
+  )
+
+  return {
+    grossRevenue: Number(revenueAgg._sum.TotalAmount ?? 0),
+    revenueWithFees: Number(revenueAgg._sum.TotalAmountIncludingFees ?? 0),
+    platformFees: Number(revenueAgg._sum.FeesAmount ?? 0),
+    gstAmount: Number(revenueAgg._sum.GstAmount ?? 0),
+    totalTicketsSold: ticketsSoldAgg._sum.TotalTickets ?? 0,
+    totalPurchases: ticketsSoldAgg._count,
+    freeTicketsCount,
+    paidTicketsCount,
+    promoDiscounts: Number(promoDiscountAgg._sum.PromoCodeDiscountAmount ?? 0),
+    payout: payout
+      ? {
+          status: payout.PayoutStatus,
+          netAmount: Number(payout.NetAmount),
+          grossRevenue: Number(payout.GrossRevenue),
+          platformFees: Number(payout.PlatformFees),
+          gstAmount: Number(payout.GstAmount),
+          requestedAt: payout.RequestedAt,
+          processedAt: payout.ProcessedAt,
+        }
+      : null,
+    totalQrs,
+    scannedQrs,
+    uniqueBuyers,
+    ticketRevenueMap,
+  }
+}
+
 export default async function EventDetailPage({
   params,
 }: {
@@ -52,16 +155,19 @@ export default async function EventDetailPage({
 
   if (!event) notFound()
 
-  const hostUser = await db.users.findUnique({
-    where: { Id: event.HostUserId },
-    select: {
-      Id: true,
-      FirstName: true,
-      LastName: true,
-      Email: true,
-      ProfilePhotoCdnUrl1: true,
-    },
-  })
+  const [hostUser, financials] = await Promise.all([
+    db.users.findUnique({
+      where: { Id: event.HostUserId },
+      select: {
+        Id: true,
+        FirstName: true,
+        LastName: true,
+        Email: true,
+        ProfilePhotoCdnUrl1: true,
+      },
+    }),
+    getEventFinancials(id),
+  ])
 
   const rsvpCount = event.EventRsvps.length
 
@@ -87,8 +193,13 @@ export default async function EventDetailPage({
           rsvpCount={rsvpCount}
           hostUser={hostUser}
         />
-        <TicketSummary tickets={event.Tickets} />
+        <EventRevenueCard financials={financials} />
       </div>
+
+      <TicketSummary
+        tickets={event.Tickets}
+        ticketRevenueMap={financials.ticketRevenueMap}
+      />
 
       {event.EventsMedia.length > 0 && (
         <MediaGallery media={event.EventsMedia} />

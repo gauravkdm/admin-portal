@@ -31,9 +31,17 @@ interface Ticket {
 
 interface TicketSummaryProps {
   tickets: Ticket[]
+  ticketRevenueMap?: Map<number, { revenue: number; sold: number }>
 }
 
-export function TicketSummary({ tickets }: TicketSummaryProps) {
+function formatCurrency(amount: number) {
+  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+}
+
+export function TicketSummary({
+  tickets,
+  ticketRevenueMap,
+}: TicketSummaryProps) {
   if (tickets.length === 0) {
     return (
       <Card>
@@ -57,13 +65,20 @@ export function TicketSummary({ tickets }: TicketSummaryProps) {
     (sum, t) => sum + (t.TotalTickets - t.AvailableTickets),
     0
   )
+  const totalRevenue = ticketRevenueMap
+    ? Array.from(ticketRevenueMap.values()).reduce(
+        (sum, r) => sum + r.revenue,
+        0
+      )
+    : 0
 
   return (
     <Card>
       <div className="p-6">
         <CardTitle>Tickets</CardTitle>
         <CardDescription>
-          {totalSold} sold • {totalAvailable} available
+          {totalSold} sold &middot; {totalAvailable} available
+          {totalRevenue > 0 && ` · ${formatCurrency(totalRevenue)} revenue`}
         </CardDescription>
       </div>
       <CardContent>
@@ -72,38 +87,51 @@ export function TicketSummary({ tickets }: TicketSummaryProps) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Sold</TableHead>
               <TableHead>Available</TableHead>
+              <TableHead>Revenue</TableHead>
               <TableHead>Sales Period</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tickets.map((ticket) => (
-              <TableRow key={ticket.Id}>
-                <TableCell className="font-medium">{ticket.Name}</TableCell>
-                <TableCell>
-                  {ticket.IsFree ? "Free" : ticket.Price.toString()}
-                </TableCell>
-                <TableCell>
-                  {ticket.AvailableTickets} / {ticket.TotalTickets}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {format(new Date(ticket.SaleStartTime), "PP")} –{" "}
-                  {format(new Date(ticket.SaleEndTime), "PP")}
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={
-                      ticket.IsExpired
-                        ? "text-muted-foreground"
-                        : "text-green-600"
-                    }
-                  >
-                    {ticket.IsExpired ? "Expired" : "Active"}
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
+            {tickets.map((ticket) => {
+              const revenueData = ticketRevenueMap?.get(ticket.Id)
+              const sold = ticket.TotalTickets - ticket.AvailableTickets
+
+              return (
+                <TableRow key={ticket.Id}>
+                  <TableCell className="font-medium">{ticket.Name}</TableCell>
+                  <TableCell>
+                    {ticket.IsFree ? "Free" : ticket.Price.toString()}
+                  </TableCell>
+                  <TableCell>{sold}</TableCell>
+                  <TableCell>
+                    {ticket.AvailableTickets} / {ticket.TotalTickets}
+                  </TableCell>
+                  <TableCell>
+                    {ticket.IsFree
+                      ? "—"
+                      : formatCurrency(revenueData?.revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {format(new Date(ticket.SaleStartTime), "PP")} –{" "}
+                    {format(new Date(ticket.SaleEndTime), "PP")}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={
+                        ticket.IsExpired
+                          ? "text-muted-foreground"
+                          : "text-green-600"
+                      }
+                    >
+                      {ticket.IsExpired ? "Expired" : "Active"}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </CardContent>

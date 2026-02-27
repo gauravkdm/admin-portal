@@ -58,7 +58,7 @@ export function Editor({
         defaultAlignment: isRtl ? "right" : "left",
       }),
       Color,
-      TextStyle,
+      TextStyle as never,
       Image,
       Link.configure({
         openOnClick: true,
