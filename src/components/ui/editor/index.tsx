@@ -58,7 +58,6 @@ export function Editor({
         defaultAlignment: isRtl ? "right" : "left",
       }),
       Color,
-      // @ts-expect-error tiptap type mismatch between hoisted and nested @tiptap/core
       TextStyle,
       Image,
       Link.configure({
