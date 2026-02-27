@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format } from "date-fns"
 
@@ -152,12 +153,19 @@ export function TicketsTable({
               </TableHeader>
               <TableBody>
                 {purchases.map((p) => (
-                  <TableRow key={p.Id}>
+                  <TableRow
+                    key={p.Id}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
                     <TableCell className="font-mono text-xs">
-                      {p.OrderId || "—"}
+                      <Link href={`${pathname}/${p.Id}`} className="block">
+                        {p.OrderId || "—"}
+                      </Link>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
-                      {p.Events?.Title || p.EventId}
+                      <Link href={`${pathname}/${p.Id}`} className="block">
+                        {p.Events?.Title || p.EventId}
+                      </Link>
                     </TableCell>
                     <TableCell className="font-mono text-xs max-w-[120px] truncate">
                       {p.UserId.slice(0, 8)}...

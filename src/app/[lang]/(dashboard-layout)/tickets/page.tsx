@@ -31,11 +31,16 @@ export default async function TicketsPage({
   }
 
   const [stats, purchases, totalCount] = await Promise.all([
-    // Summary stats
     Promise.all([
       db.purchasedTickets.count(),
       db.purchasedTickets.aggregate({
-        _sum: { TotalAmount: true },
+        _sum: {
+          TotalAmount: true,
+          FeesAmount: true,
+          GstAmount: true,
+          PromoCodeDiscountAmount: true,
+          TotalTickets: true,
+        },
         where: { PaymentStatus: "captured" },
       }),
       db.purchasedTickets.count({
@@ -47,6 +52,14 @@ export default async function TicketsPage({
           PaymentStatus: "captured",
         },
       }),
+      db.purchasedTickets
+        .findMany({
+          where: { PaymentStatus: "captured" },
+          select: { UserId: true },
+        })
+        .then((rows) => new Set(rows.map((r) => r.UserId)).size),
+      db.purchasedTicketsQrs.count(),
+      db.purchasedTicketsQrs.count({ where: { IsScanned: true } }),
     ]),
     db.purchasedTickets.findMany({
       where,
@@ -74,8 +87,24 @@ export default async function TicketsPage({
     db.purchasedTickets.count({ where }),
   ])
 
-  const [totalSold, revenueAgg, freeCount, paidCount] = stats
+  const [
+    totalSold,
+    revenueAgg,
+    freeCount,
+    paidCount,
+    uniqueBuyers,
+    totalQrs,
+    scannedQrs,
+  ] = stats
   const totalRevenue = Number(revenueAgg._sum.TotalAmount ?? 0)
+  const totalFees = Number(revenueAgg._sum.FeesAmount ?? 0)
+  const totalGst = Number(revenueAgg._sum.GstAmount ?? 0)
+  const totalPromoDiscount = Number(
+    revenueAgg._sum.PromoCodeDiscountAmount ?? 0
+  )
+  const totalTicketsSold = revenueAgg._sum.TotalTickets ?? 0
+  const avgOrderValue = paidCount > 0 ? totalRevenue / paidCount : 0
+  const checkInRate = totalQrs > 0 ? (scannedQrs / totalQrs) * 100 : 0
 
   return (
     <section className="container p-4 space-y-4">
@@ -90,35 +119,15 @@ export default async function TicketsPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Tickets Sold
-            </CardTitle>
-            <CardContent>
-              <p className="text-2xl font-semibold">
-                {totalSold.toLocaleString()}
-              </p>
-            </CardContent>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Revenue
             </CardTitle>
-            <CardContent>
+            <CardContent className="p-0 pt-1">
               <p className="text-2xl font-semibold">
                 ₹{totalRevenue.toLocaleString()}
               </p>
-            </CardContent>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Free Tickets
-            </CardTitle>
-            <CardContent>
-              <p className="text-2xl font-semibold">
-                {freeCount.toLocaleString()}
+              <p className="text-xs text-muted-foreground">
+                {totalTicketsSold.toLocaleString()} tickets across{" "}
+                {totalSold.toLocaleString()} purchases
               </p>
             </CardContent>
           </CardHeader>
@@ -126,11 +135,61 @@ export default async function TicketsPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Paid Tickets
+              Platform Earnings
             </CardTitle>
-            <CardContent>
+            <CardContent className="p-0 pt-1">
               <p className="text-2xl font-semibold">
-                {paidCount.toLocaleString()}
+                ₹{(totalFees + totalGst).toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Fees ₹{totalFees.toLocaleString()} + GST ₹
+                {totalGst.toLocaleString()}
+              </p>
+            </CardContent>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Tickets Breakdown
+            </CardTitle>
+            <CardContent className="p-0 pt-1">
+              <p className="text-2xl font-semibold">
+                {paidCount.toLocaleString()}{" "}
+                <span className="text-base font-normal text-muted-foreground">
+                  paid
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {freeCount.toLocaleString()} free &middot;{" "}
+                {uniqueBuyers.toLocaleString()} unique buyers
+              </p>
+            </CardContent>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Check-in &amp; Stats
+            </CardTitle>
+            <CardContent className="p-0 pt-1">
+              <p className="text-2xl font-semibold">
+                {checkInRate.toFixed(1)}%{" "}
+                <span className="text-base font-normal text-muted-foreground">
+                  scanned
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Avg order ₹
+                {avgOrderValue.toLocaleString("en-IN", {
+                  maximumFractionDigits: 0,
+                })}
+                {totalPromoDiscount > 0 && (
+                  <>
+                    {" "}
+                    &middot; ₹{totalPromoDiscount.toLocaleString()} in promos
+                  </>
+                )}
               </p>
             </CardContent>
           </CardHeader>

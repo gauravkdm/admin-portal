@@ -1,9 +1,12 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
+import { ExternalLink } from "lucide-react"
 
 import type { Metadata } from "next"
 
 import { db } from "@/lib/prisma"
 
+import { Button } from "@/components/ui/button"
 import { EventActions } from "./_components/event-actions"
 import { EventInfoCard } from "./_components/event-info-card"
 import { EventRevenueCard } from "./_components/event-revenue-card"
@@ -18,7 +21,22 @@ export const metadata: Metadata = {
 async function getEvent(id: string) {
   const event = await db.events.findUnique({
     where: { Id: id },
-    include: {
+    select: {
+      Id: true,
+      Title: true,
+      Location: true,
+      Description: true,
+      EventType: true,
+      Status: true,
+      City: true,
+      StartTime: true,
+      EndTime: true,
+      Capacity: true,
+      IsPublished: true,
+      AgeRestriction: true,
+      TimeZone: true,
+      CreatedAt: true,
+      HostUserId: true,
       EventRsvps: {
         include: {
           Users: {
@@ -31,10 +49,28 @@ async function getEvent(id: string) {
             },
           },
         },
-        orderBy: { CreatedAt: "desc" },
+        orderBy: { CreatedAt: "desc" as const },
       },
-      Tickets: true,
-      EventsMedia: true,
+      Tickets: {
+        select: {
+          Id: true,
+          Name: true,
+          Price: true,
+          TotalTickets: true,
+          AvailableTickets: true,
+          IsFree: true,
+          IsExpired: true,
+          SaleStartTime: true,
+          SaleEndTime: true,
+        },
+      },
+      EventsMedia: {
+        select: {
+          Id: true,
+          MediaUrl: true,
+          Type: true,
+        },
+      },
       EventCategoryMappings: {
         include: { EventCategories: { select: { Name: true } } },
       },
@@ -180,11 +216,23 @@ export default async function EventDetailPage({
             {event.City || "No location"} &middot; {event.EventType}
           </p>
         </div>
-        <EventActions
-          eventId={event.Id}
-          isPublished={event.IsPublished}
-          status={event.Status}
-        />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link
+              href={`https://www.nexumevents.com/event-detail/${event.Id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="mr-1.5 h-4 w-4" />
+              View on Nexum
+            </Link>
+          </Button>
+          <EventActions
+            eventId={event.Id}
+            isPublished={event.IsPublished}
+            status={event.Status}
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

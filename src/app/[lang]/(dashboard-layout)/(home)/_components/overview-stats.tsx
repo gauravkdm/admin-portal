@@ -1,9 +1,10 @@
 import {
+  Banknote,
   Calendar,
+  CheckCircle,
   CreditCard,
-  MessageCircle,
-  ShieldAlert,
   Ticket,
+  TrendingUp,
   Users,
 } from "lucide-react"
 
@@ -12,10 +13,15 @@ import { Card, CardTitle } from "@/components/ui/card"
 interface OverviewStatsProps {
   totalUsers: number
   totalEvents: number
-  totalTicketsSold: number
+  totalPurchases: number
   totalRevenue: number
-  pendingReports: number
-  pendingContactMessages: number
+  totalTicketsSold: number
+  usersLast30d: number
+  usersLast7d: number
+  eventsLast30d: number
+  purchasesLast7d: number
+  checkInRate: number
+  uniqueBuyers: number
 }
 
 function StatCard({
@@ -56,44 +62,65 @@ function StatCard({
 export function OverviewStats({
   totalUsers,
   totalEvents,
-  totalTicketsSold,
+  totalPurchases,
   totalRevenue,
-  pendingReports,
-  pendingContactMessages,
+  totalTicketsSold,
+  usersLast30d,
+  usersLast7d,
+  eventsLast30d,
+  purchasesLast7d,
+  checkInRate,
+  uniqueBuyers,
 }: OverviewStatsProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatCard
+        title="Total Revenue"
+        value={`₹${totalRevenue.toLocaleString()}`}
+        icon={Banknote}
+        description={`${totalTicketsSold.toLocaleString()} tickets sold`}
+      />
       <StatCard
         title="Total Users"
         value={totalUsers.toLocaleString()}
         icon={Users}
+        description={`+${usersLast7d} this week · +${usersLast30d} this month`}
       />
       <StatCard
         title="Total Events"
         value={totalEvents.toLocaleString()}
         icon={Calendar}
+        description={`+${eventsLast30d} this month`}
       />
       <StatCard
-        title="Tickets Sold"
-        value={totalTicketsSold.toLocaleString()}
+        title="Ticket Purchases"
+        value={totalPurchases.toLocaleString()}
         icon={Ticket}
+        description={`+${purchasesLast7d} this week · ${uniqueBuyers.toLocaleString()} unique buyers`}
       />
       <StatCard
-        title="Total Revenue"
-        value={`₹${totalRevenue.toLocaleString()}`}
+        title="Avg Order Value"
+        value={`₹${totalPurchases > 0 ? Math.round(totalRevenue / totalPurchases).toLocaleString() : 0}`}
         icon={CreditCard}
+        description="Per purchase"
       />
       <StatCard
-        title="Pending Reports"
-        value={pendingReports}
-        icon={ShieldAlert}
-        description="Requires attention"
+        title="Revenue / Event"
+        value={`₹${totalEvents > 0 ? Math.round(totalRevenue / totalEvents).toLocaleString() : 0}`}
+        icon={TrendingUp}
+        description="Average per event"
       />
       <StatCard
-        title="Contact Messages"
-        value={pendingContactMessages}
-        icon={MessageCircle}
-        description="Pending"
+        title="Check-in Rate"
+        value={`${checkInRate.toFixed(1)}%`}
+        icon={CheckCircle}
+        description="QR codes scanned"
+      />
+      <StatCard
+        title="Conversion"
+        value={`${totalUsers > 0 ? ((uniqueBuyers / totalUsers) * 100).toFixed(1) : 0}%`}
+        icon={Users}
+        description={`${uniqueBuyers} buyers out of ${totalUsers.toLocaleString()} users`}
       />
     </div>
   )
