@@ -1,0 +1,872 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AccessTokens {
+  Id              Int          @id(map: "PK_AccessTokens") @default(autoincrement())
+  TokenIdentifier String
+  TokenValue      String
+  ExpiresAt       DateTime     @db.Timestamptz(6)
+  CreatedAt       DateTime     @db.Timestamptz(6)
+  UserTokens      UserTokens[]
+}
+
+model ApplicationErrors {
+  Id             Int      @id(map: "PK_ApplicationErrors") @default(autoincrement())
+  Message        String?
+  StackTrace     String?
+  Timestamp      DateTime @db.Timestamptz(6)
+  Source         String?
+  AdditionalInfo String?
+}
+
+model ContactMessages {
+  Id               Int       @id(map: "PK_ContactMessages") @default(autoincrement())
+  FullName         String?
+  Email            String?
+  InquiryType      String?
+  Subject          String?
+  Message          String?
+  Status           String?
+  AdminNotes       String?
+  ResolvedByUserId String?   @db.Uuid
+  ResolvedAt       DateTime? @db.Timestamptz(6)
+  IpAddress        String?
+  UserAgent        String?
+  UserId           String?   @db.Uuid
+  CreatedAt        DateTime  @db.Timestamptz(6)
+  UpdatedAt        DateTime  @db.Timestamptz(6)
+  Users            Users?    @relation(fields: [UserId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ContactMessages_Users_UserId")
+
+  @@index([UserId], map: "IX_ContactMessages_UserId")
+}
+
+model Countries {
+  Id              Int               @id(map: "PK_Countries") @default(autoincrement())
+  ISO             String?
+  Name            String?
+  NiceName        String?
+  ISO3            String?
+  NumCode         Int?
+  PhoneCode       Int?
+  SMSDeliveryLogs SMSDeliveryLogs[]
+}
+
+model Currencies {
+  Id               Int                @id(map: "PK_Currencies") @default(autoincrement())
+  Code             String?
+  Symbol           String?
+  PurchasedTickets PurchasedTickets[]
+}
+
+model DemoRequests {
+  Id                    Int       @id(map: "PK_DemoRequests") @default(autoincrement())
+  FullName              String?
+  Email                 String?
+  CompanyOrganization   String?
+  PhoneNumber           String?
+  EventType             String?
+  AdditionalInformation String?
+  Status                String?
+  AdminNotes            String?
+  ScheduledDemoAt       DateTime? @db.Timestamptz(6)
+  AssignedToUserId      String?   @db.Uuid
+  IpAddress             String?
+  UserAgent             String?
+  UserId                String?   @db.Uuid
+  CreatedAt             DateTime  @db.Timestamptz(6)
+  UpdatedAt             DateTime  @db.Timestamptz(6)
+  Users                 Users?    @relation(fields: [UserId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_DemoRequests_Users_UserId")
+
+  @@index([UserId], map: "IX_DemoRequests_UserId")
+}
+
+model EventCategories {
+  Id                    Int                     @id(map: "PK_EventCategories") @default(autoincrement())
+  Name                  String
+  Description           String?
+  Unicode               String?
+  Color                 String?
+  EventCategoryMappings EventCategoryMappings[]
+}
+
+model EventCategoryMappings {
+  Id              Int             @id(map: "PK_EventCategoryMappings") @default(autoincrement())
+  EventId         String          @db.Uuid
+  CategoryId      Int
+  EventCategories EventCategories @relation(fields: [CategoryId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventCategoryMappings_EventCategories_CategoryId")
+  Events          Events          @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventCategoryMappings_Events_EventId")
+
+  @@index([CategoryId], map: "IX_EventCategoryMappings_CategoryId")
+  @@index([EventId], map: "IX_EventCategoryMappings_EventId")
+}
+
+model EventCommentLikes {
+  Id            Int           @id(map: "PK_EventCommentLikes") @default(autoincrement())
+  CommentId     Int
+  UserId        String        @db.Uuid
+  CreatedAt     DateTime      @db.Timestamptz(6)
+  EventComments EventComments @relation(fields: [CommentId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventCommentLikes_EventComments_CommentId")
+  Users         Users         @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventCommentLikes_Users_UserId")
+
+  @@unique([CommentId, UserId], map: "IX_EventCommentLikes_CommentId_UserId")
+  @@index([CommentId], map: "IX_EventCommentLikes_CommentId")
+  @@index([UserId], map: "IX_EventCommentLikes_UserId")
+}
+
+model EventCommentReactions {
+  Id            Int           @id(map: "PK_EventCommentReactions") @default(autoincrement())
+  CommentId     Int
+  UserId        String        @db.Uuid
+  Emoji         String?
+  CreatedAt     DateTime      @db.Timestamptz(6)
+  EventComments EventComments @relation(fields: [CommentId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventCommentReactions_EventComments_CommentId")
+  Users         Users         @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventCommentReactions_Users_UserId")
+
+  @@unique([CommentId, UserId, Emoji], map: "IX_EventCommentReactions_CommentId_UserId_Emoji")
+  @@index([CommentId, Emoji], map: "IX_EventCommentReactions_CommentId_Emoji")
+  @@index([UserId], map: "IX_EventCommentReactions_UserId")
+}
+
+model EventComments {
+  Id                    Int                     @id(map: "PK_EventComments") @default(autoincrement())
+  EventId               String                  @db.Uuid
+  UserId                String                  @db.Uuid
+  Body                  String?
+  ParentCommentId       Int?
+  IsEdited              Boolean
+  IsDeleted             Boolean
+  CreatedAt             DateTime                @db.Timestamptz(6)
+  UpdatedAt             DateTime                @db.Timestamptz(6)
+  EventCommentLikes     EventCommentLikes[]
+  EventCommentReactions EventCommentReactions[]
+  EventComments         EventComments?          @relation("EventCommentsToEventComments", fields: [ParentCommentId], references: [Id], onDelete: Restrict, onUpdate: NoAction, map: "FK_EventComments_EventComments_ParentCommentId")
+  other_EventComments   EventComments[]         @relation("EventCommentsToEventComments")
+  Events                Events                  @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventComments_Events_EventId")
+  Users                 Users                   @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventComments_Users_UserId")
+
+  @@index([EventId, ParentCommentId, CreatedAt], map: "IX_EventComments_EventId_ParentCommentId_CreatedAt")
+  @@index([ParentCommentId], map: "IX_EventComments_ParentCommentId")
+  @@index([UserId, CreatedAt], map: "IX_EventComments_UserId_CreatedAt")
+}
+
+model EventDiscoveryQueues {
+  Id                                             Int       @id(map: "PK_EventDiscoveryQueues") @default(autoincrement())
+  EventId                                        String    @db.Uuid
+  UserId                                         String    @db.Uuid
+  TargetUserId                                   String    @db.Uuid
+  MatchScore                                     Int
+  MatchReasons                                   String?
+  DisplayOrder                                   Int
+  IsShown                                        Boolean
+  ShownAt                                        DateTime? @db.Timestamptz(6)
+  CreatedAt                                      DateTime  @db.Timestamptz(6)
+  ExpiresAt                                      DateTime  @db.Timestamptz(6)
+  Events                                         Events    @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventDiscoveryQueues_Events_EventId")
+  Users_EventDiscoveryQueues_TargetUserIdToUsers Users     @relation("EventDiscoveryQueues_TargetUserIdToUsers", fields: [TargetUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventDiscoveryQueues_Users_TargetUserId")
+  Users_EventDiscoveryQueues_UserIdToUsers       Users     @relation("EventDiscoveryQueues_UserIdToUsers", fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventDiscoveryQueues_Users_UserId")
+
+  @@index([EventId], map: "IX_EventDiscoveryQueues_EventId")
+  @@index([TargetUserId], map: "IX_EventDiscoveryQueues_TargetUserId")
+  @@index([UserId], map: "IX_EventDiscoveryQueues_UserId")
+}
+
+model EventMatchPreferences {
+  Id                    Int      @id(map: "PK_EventMatchPreferences") @default(autoincrement())
+  EventId               String   @db.Uuid
+  UserId                String   @db.Uuid
+  EventPreferredGender  String?
+  EventPreferredAgeMin  Int?
+  EventPreferredAgeMax  Int?
+  EventRelationShipType String?
+  CreatedAt             DateTime @db.Timestamptz(6)
+  UpdatedAt             DateTime @db.Timestamptz(6)
+  Events                Events   @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventMatchPreferences_Events_EventId")
+  Users                 Users    @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventMatchPreferences_Users_UserId")
+
+  @@unique([EventId, UserId], map: "IX_EventMatchPreferences_EventId_UserId")
+  @@index([EventId], map: "IX_EventMatchPreferences_EventId")
+  @@index([UserId], map: "IX_EventMatchPreferences_UserId")
+}
+
+model EventMatches {
+  Id                                Int                 @id(map: "PK_EventMatches") @default(autoincrement())
+  EventId                           String              @db.Uuid
+  User1Id                           String              @db.Uuid
+  User2Id                           String              @db.Uuid
+  MatchedAt                         DateTime            @db.Timestamptz(6)
+  IsActive                          Boolean
+  CompatibilityScore                Int
+  MatchReasons                      String?
+  CreatedAt                         DateTime            @db.Timestamptz(6)
+  UpdatedAt                         DateTime            @db.Timestamptz(6)
+  Events                            Events              @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventMatches_Events_EventId")
+  Users_EventMatches_User1IdToUsers Users               @relation("EventMatches_User1IdToUsers", fields: [User1Id], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventMatches_Users_User1Id")
+  Users_EventMatches_User2IdToUsers Users               @relation("EventMatches_User2IdToUsers", fields: [User2Id], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventMatches_Users_User2Id")
+  PrivateChatGroups                 PrivateChatGroups[]
+
+  @@index([EventId], map: "IX_EventMatches_EventId")
+  @@index([User1Id], map: "IX_EventMatches_User1Id")
+  @@index([User2Id], map: "IX_EventMatches_User2Id")
+}
+
+model EventPayouts {
+  Id               Int       @id(map: "PK_EventPayouts") @default(autoincrement())
+  EventId          String    @db.Uuid
+  HostUserId       String    @db.Uuid
+  GrossRevenue     Decimal   @db.Decimal
+  PlatformFees     Decimal   @db.Decimal
+  GstAmount        Decimal   @db.Decimal
+  NetAmount        Decimal   @db.Decimal
+  PayoutStatus     String?
+  RazorpayPayoutId String?
+  PayoutLinkUrl    String?
+  TransactionId    String?
+  FailureReason    String?
+  EventEndTime     DateTime  @db.Timestamptz(6)
+  RequestedAt      DateTime  @db.Timestamptz(6)
+  ProcessedAt      DateTime? @db.Timestamptz(6)
+  FailedAt         DateTime? @db.Timestamptz(6)
+  Events           Events    @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventPayouts_Events_EventId")
+  Users            Users     @relation(fields: [HostUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventPayouts_Users_HostUserId")
+
+  @@index([EventId], map: "IX_EventPayouts_EventId")
+  @@index([HostUserId], map: "IX_EventPayouts_HostUserId")
+}
+
+model EventQuestionAnswers {
+  Id              Int            @id(map: "PK_EventQuestionAnswers") @default(autoincrement())
+  EventId         String         @db.Uuid
+  EventQuestionId Int
+  UserId          String         @db.Uuid
+  AnswerText      String?
+  CreatedAt       DateTime       @db.Timestamptz(6)
+  UpdatedAt       DateTime       @db.Timestamptz(6)
+  EventQuestions  EventQuestions @relation(fields: [EventQuestionId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventQuestionAnswers_EventQuestions_EventQuestionId")
+  Events          Events         @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventQuestionAnswers_Events_EventId")
+  Users           Users          @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventQuestionAnswers_Users_UserId")
+
+  @@unique([EventId, EventQuestionId, UserId], map: "IX_EventQuestionAnswers_EventId_EventQuestionId_UserId")
+  @@index([EventId, UserId], map: "IX_EventQuestionAnswers_EventId_UserId")
+  @@index([EventQuestionId, UserId], map: "IX_EventQuestionAnswers_EventQuestionId_UserId")
+  @@index([UserId], map: "IX_EventQuestionAnswers_UserId")
+}
+
+model EventQuestions {
+  Id                   Int                    @id(map: "PK_EventQuestions") @default(autoincrement())
+  EventId              String                 @db.Uuid
+  QuestionText         String?
+  QuestionType         String?
+  IsRequired           Boolean
+  OptionsJson          String?
+  DisplayOrder         Int
+  IsActive             Boolean
+  CreatedAt            DateTime               @db.Timestamptz(6)
+  UpdatedAt            DateTime               @db.Timestamptz(6)
+  EventQuestionAnswers EventQuestionAnswers[]
+  Events               Events                 @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventQuestions_Events_EventId")
+
+  @@index([EventId, DisplayOrder], map: "IX_EventQuestions_EventId_DisplayOrder")
+  @@index([EventId, IsActive], map: "IX_EventQuestions_EventId_IsActive")
+}
+
+model EventRsvps {
+  Id                Int       @id(map: "PK_EventRsvps") @default(autoincrement())
+  EventId           String    @db.Uuid
+  UserId            String    @db.Uuid
+  Status            String?
+  IsMatchingEnabled Boolean
+  MatchingEnabledAt DateTime? @db.Timestamptz(6)
+  LastActiveAt      DateTime? @db.Timestamptz(6)
+  CreatedAt         DateTime  @db.Timestamptz(6)
+  UpdatedAt         DateTime  @db.Timestamptz(6)
+  Events            Events    @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventRsvps_Events_EventId")
+  Users             Users     @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventRsvps_Users_UserId")
+
+  @@index([EventId], map: "IX_EventRsvps_EventId")
+  @@index([UserId], map: "IX_EventRsvps_UserId")
+}
+
+model EventSections {
+  Id           BigInt    @id(map: "PK_EventSections") @default(autoincrement())
+  EventId      String    @db.Uuid
+  Type         String
+  Title        String
+  Content      String?
+  Url          String?
+  DisplayOrder Int
+  CreatedAt    DateTime  @db.Timestamptz(6)
+  UpdatedAt    DateTime? @db.Timestamptz(6)
+  Events       Events    @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventSections_Events_EventId")
+
+  @@index([EventId, DisplayOrder], map: "IX_EventSections_EventId_DisplayOrder")
+}
+
+model EventSwipeActions {
+  Id                                          Int      @id(map: "PK_EventSwipeActions") @default(autoincrement())
+  EventId                                     String   @db.Uuid
+  SwiperUserId                                String   @db.Uuid
+  SwipedUserId                                String   @db.Uuid
+  Action                                      String?
+  SwipedAt                                    DateTime @db.Timestamptz(6)
+  DeviceId                                    String?
+  IpAddress                                   String?
+  SwiperLatitude                              Float?
+  SwiperLongitude                             Float?
+  Events                                      Events   @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventSwipeActions_Events_EventId")
+  Users_EventSwipeActions_SwipedUserIdToUsers Users    @relation("EventSwipeActions_SwipedUserIdToUsers", fields: [SwipedUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventSwipeActions_Users_SwipedUserId")
+  Users_EventSwipeActions_SwiperUserIdToUsers Users    @relation("EventSwipeActions_SwiperUserIdToUsers", fields: [SwiperUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventSwipeActions_Users_SwiperUserId")
+
+  @@index([EventId], map: "IX_EventSwipeActions_EventId")
+  @@index([SwipedUserId], map: "IX_EventSwipeActions_SwipedUserId")
+  @@index([SwiperUserId], map: "IX_EventSwipeActions_SwiperUserId")
+}
+
+model Events {
+  Id                    String                  @id(map: "PK_Events") @db.Uuid
+  Title                 String
+  Location              String
+  Remarks               String?
+  StartTime             DateTime                @db.Timestamptz(6)
+  EndTime               DateTime                @db.Timestamptz(6)
+  Description           String
+  EventType             String
+  Status                String?
+  ChatSettings          String?
+  Latitude              Float
+  Longitude             Float
+  City                  String?
+  TimeZone              String?
+  IsPublished           Boolean
+  MapUrl                String?
+  ShowGuestList         Boolean
+  Visibility            String?
+  CreatedAt             DateTime                @db.Timestamptz(6)
+  UpdatedAt             DateTime?               @db.Timestamptz(6)
+  HostUserId            String                  @db.Uuid
+  AgeRestriction        String?
+  Capacity              Int?
+  MainGroupId           String?
+  AnnouncementsGroupId  String?
+  QuestionsGroupId      String?
+  AutoRemindersEnabled  Boolean                 @default(false)
+  QuestionnaireEnabled  Boolean                 @default(false)
+  EventCategoryMappings EventCategoryMappings[]
+  EventComments         EventComments[]
+  EventDiscoveryQueues  EventDiscoveryQueues[]
+  EventMatchPreferences EventMatchPreferences[]
+  EventMatches          EventMatches[]
+  EventPayouts          EventPayouts[]
+  EventQuestionAnswers  EventQuestionAnswers[]
+  EventQuestions        EventQuestions[]
+  EventRsvps            EventRsvps[]
+  EventSections         EventSections[]
+  EventSwipeActions     EventSwipeActions[]
+  EventsMedia           EventsMedia[]
+  PrivateChatGroups     PrivateChatGroups[]
+  PurchasedTickets      PurchasedTickets[]
+  Tickets               Tickets[]
+
+  @@index([Status, StartTime, EndTime], map: "IX_Events_Status_StartTime_EndTime")
+}
+
+model EventsMedia {
+  Id          Int     @id(map: "PK_EventsMedia") @default(autoincrement())
+  EventId     String  @db.Uuid
+  MediaUrl    String?
+  MediaUrlKey String?
+  Type        Int
+  Events      Events  @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_EventsMedia_Events_EventId")
+
+  @@index([EventId], map: "IX_EventsMedia_EventId")
+}
+
+model ExceptionLogs {
+  Id               Int      @id(map: "PK_ExceptionLogs") @default(autoincrement())
+  IP               String?
+  HttpMethod       String?
+  StatusCode       Int
+  ExceptionMessage String?
+  IsMobile         Boolean
+  Timestamp        DateTime @db.Timestamptz(6)
+  RequestPath      String?
+  UserAgent        String?
+  Referrer         String?
+  RequestDetails   String?
+}
+
+model FavouriteEvents {
+  Id        Int      @id(map: "PK_FavouriteEvents") @default(autoincrement())
+  EventId   String   @db.Uuid
+  UserId    String   @db.Uuid
+  CreatedAt DateTime @db.Timestamptz(6)
+  UpdatedAt DateTime @db.Timestamptz(6)
+}
+
+model Hobbies {
+  Id      Int     @id(map: "PK_Hobbies") @default(autoincrement())
+  Name    String?
+  Unicode String?
+}
+
+model Interests {
+  Id      Int     @id(map: "PK_Interests") @default(autoincrement())
+  Name    String?
+  Unicode String?
+}
+
+model Languages {
+  Id   Int     @id(map: "PK_Languages") @default(autoincrement())
+  Name String?
+  Code String?
+}
+
+model Notifications {
+  Id        Int       @id(map: "PK_Notifications") @default(autoincrement())
+  UserId    String    @db.Uuid
+  Title     String?
+  Message   String?
+  Type      Int
+  IsRead    Boolean
+  Data      String?
+  CreatedAt DateTime  @db.Timestamptz(6)
+  ReadAt    DateTime? @db.Timestamptz(6)
+  Users     Users     @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Notifications_Users_UserId")
+
+  @@index([UserId], map: "IX_Notifications_UserId")
+}
+
+model PrivateChatGroups {
+  Id                                    Int           @id(map: "PK_PrivateChatGroups") @default(autoincrement())
+  GroupId                               String
+  Type                                  String
+  EventId                               String        @db.Uuid
+  UserId                                String?       @db.Uuid
+  HostId                                String?       @db.Uuid
+  MatchId                               Int?
+  Name                                  String
+  Description                           String?
+  CreatedAt                             DateTime      @db.Timestamptz(6)
+  UpdatedAt                             DateTime?     @db.Timestamptz(6)
+  IsActive                              Boolean
+  EventMatches                          EventMatches? @relation(fields: [MatchId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_PrivateChatGroups_EventMatches_MatchId")
+  Events                                Events        @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PrivateChatGroups_Events_EventId")
+  Users_PrivateChatGroups_HostIdToUsers Users?        @relation("PrivateChatGroups_HostIdToUsers", fields: [HostId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_PrivateChatGroups_Users_HostId")
+  Users_PrivateChatGroups_UserIdToUsers Users?        @relation("PrivateChatGroups_UserIdToUsers", fields: [UserId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_PrivateChatGroups_Users_UserId")
+
+  @@index([EventId], map: "IX_PrivateChatGroups_EventId")
+  @@index([HostId], map: "IX_PrivateChatGroups_HostId")
+  @@index([MatchId], map: "IX_PrivateChatGroups_MatchId")
+  @@index([UserId], map: "IX_PrivateChatGroups_UserId")
+}
+
+model PromoCodes {
+  Id                 Int      @id(map: "PK_PromoCodes") @default(autoincrement())
+  Name               String
+  Description        String?
+  DiscountPercentage Decimal  @db.Decimal(18, 2)
+  DiscountAmount     Decimal  @db.Decimal(18, 2)
+  RedemptionLimit    Int
+  ValidFrom          DateTime @db.Timestamptz(6)
+  ValidUntil         DateTime @db.Timestamptz(6)
+  TicketId           Int
+  IsExpired          Boolean
+  UsageCount         Int
+  CreatedAt          DateTime @db.Timestamptz(6)
+  UpdatedAt          DateTime @db.Timestamptz(6)
+  Tickets            Tickets  @relation(fields: [TicketId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PromoCodes_Tickets_TicketId")
+
+  @@index([IsExpired, ValidUntil], map: "IX_PromoCodes_IsExpired_ValidUntil")
+  @@index([TicketId], map: "IX_PromoCodes_TicketId")
+}
+
+model PurchasedTickets {
+  Id                       Int                   @id(map: "PK_PurchasedTickets") @default(autoincrement())
+  TicketId                 Int
+  UserId                   String                @db.Uuid
+  CurrencyId               Int
+  FeesPercentage           Decimal               @db.Decimal(18, 2)
+  GstPercentage            Decimal               @db.Decimal(18, 2)
+  FeesAmount               Decimal               @db.Decimal(18, 2)
+  GstAmount                Decimal               @db.Decimal(18, 2)
+  TotalTickets             Int
+  TotalAmount              Decimal               @db.Decimal(18, 2)
+  TotalAmountIncludingFees Decimal               @db.Decimal(18, 2)
+  PromoCodeId              Int?
+  PromoCodeDiscountAmount  Decimal               @db.Decimal(18, 2)
+  OrderId                  String?
+  PaymentStatus            String?
+  EventId                  String                @db.Uuid
+  CreatedAt                DateTime              @db.Timestamptz(6)
+  UpdatedAt                DateTime              @db.Timestamptz(6)
+  Currencies               Currencies            @relation(fields: [CurrencyId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PurchasedTickets_Currencies_CurrencyId")
+  Events                   Events                @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PurchasedTickets_Events_EventId")
+  PurchasedTicketsQrs      PurchasedTicketsQrs[]
+  SharedTickets            SharedTickets[]
+
+  @@index([CurrencyId], map: "IX_PurchasedTickets_CurrencyId")
+  @@index([EventId], map: "IX_PurchasedTickets_EventId")
+}
+
+model PurchasedTicketsQrs {
+  Id                Int              @id(map: "PK_PurchasedTicketsQrs") @default(autoincrement())
+  PurchasedTicketId Int
+  BarcodeData       String
+  Type              Int
+  MediaUrl          String?
+  MediaUrlKey       String?
+  CreatedAt         DateTime         @db.Timestamptz(6)
+  UpdatedAt         DateTime         @db.Timestamptz(6)
+  IsScanned         Boolean
+  UserId            String?          @db.Uuid
+  PurchasedTickets  PurchasedTickets @relation(fields: [PurchasedTicketId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PurchasedTicketsQrs_PurchasedTickets_PurchasedTicketId")
+  Users             Users?           @relation(fields: [UserId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_PurchasedTicketsQrs_Users_UserId")
+  SharedTickets     SharedTickets[]
+
+  @@index([PurchasedTicketId], map: "IX_PurchasedTicketsQrs_PurchasedTicketId")
+  @@index([UserId], map: "IX_PurchasedTicketsQrs_UserId")
+}
+
+model PushNotificationHistories {
+  Id           Int       @id(map: "PK_PushNotificationHistories") @default(autoincrement())
+  UserId       String    @db.Uuid
+  DeviceToken  String?
+  Platform     String?
+  Title        String?
+  Body         String?
+  Data         String?
+  FcmMessageId String?
+  Status       String?
+  ErrorMessage String?
+  SentAt       DateTime  @db.Timestamptz(6)
+  DeliveredAt  DateTime? @db.Timestamptz(6)
+  FailedAt     DateTime? @db.Timestamptz(6)
+  Users        Users     @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PushNotificationHistories_Users_UserId")
+
+  @@index([UserId], map: "IX_PushNotificationHistories_UserId")
+  @@index([Status, SentAt], map: "IX_PushNotificationHistory_Status_SentAt")
+}
+
+model Questions {
+  Id           Int      @id(map: "PK_Questions") @default(autoincrement())
+  QuestionText String?
+  Category     String?
+  IsActive     Boolean
+  DisplayOrder Int
+  CreatedAt    DateTime @db.Timestamptz(6)
+  UpdatedAt    DateTime @db.Timestamptz(6)
+}
+
+model RefreshTokens {
+  Id              Int          @id(map: "PK_RefreshTokens") @default(autoincrement())
+  TokenIdentifier String
+  TokenValue      String
+  ExpiresAt       DateTime     @db.Timestamptz(6)
+  CreatedAt       DateTime     @db.Timestamptz(6)
+  UserTokens      UserTokens[]
+}
+
+model RequestLogs {
+  Id             Int      @id(map: "PK_RequestLogs") @default(autoincrement())
+  StatusCode     Int
+  IP             String?
+  HttpMethod     String?
+  RequestPath    String?
+  Timestamp      DateTime @db.Timestamptz(6)
+  RequestDetails String?
+  RequestBody    String?
+  ResponseBody   String?
+  Headers        String?
+}
+
+model SMSApplicationFeatures {
+  Id                 Int               @id(map: "PK_SMSApplicationFeatures") @default(autoincrement())
+  FeatureName        String?
+  FeatureDescription String?
+  SMSDeliveryLogs    SMSDeliveryLogs[]
+}
+
+model SMSDeliveryLogs {
+  Id                     Int                    @id(map: "PK_SMSDeliveryLogs") @default(autoincrement())
+  PhoneNumber            String
+  Email                  String?
+  MessageSid             String?
+  MessageStatus          String?
+  DeliveryDate           DateTime               @db.Timestamptz(6)
+  CountryId              Int
+  ApplicationFeatureId   Int
+  Countries              Countries              @relation(fields: [CountryId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_SMSDeliveryLogs_Countries_CountryId")
+  SMSApplicationFeatures SMSApplicationFeatures @relation(fields: [ApplicationFeatureId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_SMSDeliveryLogs_SMSApplicationFeatures_ApplicationFeatureId")
+
+  @@index([ApplicationFeatureId], map: "IX_SMSDeliveryLogs_ApplicationFeatureId")
+  @@index([CountryId], map: "IX_SMSDeliveryLogs_CountryId")
+}
+
+model SharedTickets {
+  Id                                          Int                 @id(map: "PK_SharedTickets") @default(autoincrement())
+  PurchasedTicketId                           Int
+  PurchasedTicketsQrId                        Int
+  SharedByUserId                              String              @db.Uuid
+  ShareToken                                  String
+  ShareLink                                   String
+  Status                                      Int
+  ExpiresAt                                   DateTime            @db.Timestamptz(6)
+  RedeemedAt                                  DateTime?           @db.Timestamptz(6)
+  RedeemedByUserId                            String?             @db.Uuid
+  Message                                     String?
+  CreatedAt                                   DateTime            @db.Timestamptz(6)
+  UpdatedAt                                   DateTime            @db.Timestamptz(6)
+  PurchasedTicketsQrs                         PurchasedTicketsQrs @relation(fields: [PurchasedTicketsQrId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_SharedTickets_PurchasedTicketsQrs_PurchasedTicketsQrId")
+  PurchasedTickets                            PurchasedTickets    @relation(fields: [PurchasedTicketId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_SharedTickets_PurchasedTickets_PurchasedTicketId")
+  Users_SharedTickets_RedeemedByUserIdToUsers Users?              @relation("SharedTickets_RedeemedByUserIdToUsers", fields: [RedeemedByUserId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_SharedTickets_Users_RedeemedByUserId")
+  Users_SharedTickets_SharedByUserIdToUsers   Users               @relation("SharedTickets_SharedByUserIdToUsers", fields: [SharedByUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_SharedTickets_Users_SharedByUserId")
+
+  @@index([PurchasedTicketId], map: "IX_SharedTickets_PurchasedTicketId")
+  @@index([PurchasedTicketsQrId], map: "IX_SharedTickets_PurchasedTicketsQrId")
+  @@index([RedeemedByUserId], map: "IX_SharedTickets_RedeemedByUserId")
+  @@index([SharedByUserId], map: "IX_SharedTickets_SharedByUserId")
+}
+
+model Tickets {
+  Id                Int          @id(map: "PK_Tickets") @default(autoincrement())
+  Name              String
+  Description       String?
+  Price             Decimal      @db.Decimal(18, 2)
+  TotalTickets      Int
+  SaleStartTime     DateTime     @db.Timestamptz(6)
+  SaleEndTime       DateTime     @db.Timestamptz(6)
+  MaxTicketsPerUser Int
+  AvailableTickets  Int
+  IsFree            Boolean
+  IsExpired         Boolean
+  CreatedAt         DateTime     @db.Timestamptz(6)
+  UpdatedAt         DateTime     @db.Timestamptz(6)
+  EventId           String       @db.Uuid
+  PromoCodes        PromoCodes[]
+  Events            Events       @relation(fields: [EventId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Tickets_Events_EventId")
+
+  @@index([EventId], map: "IX_Tickets_EventId")
+  @@index([IsExpired, SaleEndTime], map: "IX_Tickets_IsExpired_SaleEndTime")
+}
+
+model Timezones {
+  Id          Int     @id(map: "PK_Timezones") @default(autoincrement())
+  TimeZone    String?
+  DisplayName String?
+  Users       Users[]
+}
+
+model UserAnswers {
+  Id         Int      @id(map: "PK_UserAnswers") @default(autoincrement())
+  UserId     String   @db.Uuid
+  QuestionId Int
+  Answer     String?
+  CreatedAt  DateTime @db.Timestamptz(6)
+  UpdatedAt  DateTime @db.Timestamptz(6)
+}
+
+model UserBlocks {
+  Id                                    Int      @id(map: "PK_UserBlocks") @default(autoincrement())
+  BlockerUserId                         String   @db.Uuid
+  BlockedUserId                         String   @db.Uuid
+  Reason                                String?
+  BlockedAt                             DateTime @db.Timestamptz(6)
+  IsActive                              Boolean
+  Users_UserBlocks_BlockedUserIdToUsers Users    @relation("UserBlocks_BlockedUserIdToUsers", fields: [BlockedUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserBlocks_Users_BlockedUserId")
+  Users_UserBlocks_BlockerUserIdToUsers Users    @relation("UserBlocks_BlockerUserIdToUsers", fields: [BlockerUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserBlocks_Users_BlockerUserId")
+
+  @@index([BlockedUserId], map: "IX_UserBlocks_BlockedUserId")
+  @@index([BlockerUserId], map: "IX_UserBlocks_BlockerUserId")
+}
+
+model UserDeviceTokens {
+  Id                     Int                     @id(map: "PK_UserDeviceTokens") @default(autoincrement())
+  UserId                 String                  @db.Uuid
+  DeviceToken            String?
+  Platform               String?
+  DeviceId               String?
+  AppVersion             String?
+  OsVersion              String?
+  IsActive               Boolean
+  CreatedAt              DateTime                @db.Timestamptz(6)
+  UpdatedAt              DateTime                @db.Timestamptz(6)
+  LastUsedAt             DateTime?               @db.Timestamptz(6)
+  SessionExpiresAt       DateTime?               @db.Timestamptz(6)
+  SessionId              String?
+  IsSessionActive        Boolean
+  LastHeartbeatAt        DateTime?               @db.Timestamptz(6)
+  SessionStartTime       DateTime?               @db.Timestamptz(6)
+  TotalUsageTime         Unsupported("interval")
+  TotalSessions          Int
+  LastPlatformUsage      DateTime?               @db.Timestamptz(6)
+  CurrentSessionDuration Unsupported("interval")
+  Users                  Users                   @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserDeviceTokens_Users_UserId")
+
+  @@index([LastUsedAt, CreatedAt], map: "IX_UserDeviceToken_LastUsedAt_CreatedAt")
+  @@index([UserId], map: "IX_UserDeviceTokens_UserId")
+}
+
+model UserHobbies {
+  Id        Int      @id(map: "PK_UserHobbies") @default(autoincrement())
+  UserId    String   @db.Uuid
+  HobbiesId Int
+  CreatedAt DateTime @db.Timestamptz(6)
+  UpdatedAt DateTime @db.Timestamptz(6)
+}
+
+model UserInterests {
+  Id          Int      @id(map: "PK_UserInterests") @default(autoincrement())
+  UserId      String   @db.Uuid
+  InterestsId Int
+  CreatedAt   DateTime @db.Timestamptz(6)
+  UpdatedAt   DateTime @db.Timestamptz(6)
+}
+
+model UserLanguages {
+  Id          Int      @id(map: "PK_UserLanguages") @default(autoincrement())
+  UserId      String   @db.Uuid
+  LanguagesId Int
+  CreatedAt   DateTime @db.Timestamptz(6)
+  UpdatedAt   DateTime @db.Timestamptz(6)
+}
+
+model UserReports {
+  Id                                        Int       @id(map: "PK_UserReports") @default(autoincrement())
+  ReporterUserId                            String    @db.Uuid
+  ReportedUserId                            String    @db.Uuid
+  ReportType                                String?
+  Description                               String?
+  Status                                    String?
+  ReportedAt                                DateTime  @db.Timestamptz(6)
+  ReviewedAt                                DateTime? @db.Timestamptz(6)
+  ReviewedByUserId                          String?   @db.Uuid
+  AdminNotes                                String?
+  Users_UserReports_ReportedUserIdToUsers   Users     @relation("UserReports_ReportedUserIdToUsers", fields: [ReportedUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserReports_Users_ReportedUserId")
+  Users_UserReports_ReporterUserIdToUsers   Users     @relation("UserReports_ReporterUserIdToUsers", fields: [ReporterUserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserReports_Users_ReporterUserId")
+  Users_UserReports_ReviewedByUserIdToUsers Users?    @relation("UserReports_ReviewedByUserIdToUsers", fields: [ReviewedByUserId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_UserReports_Users_ReviewedByUserId")
+
+  @@index([ReportedUserId], map: "IX_UserReports_ReportedUserId")
+  @@index([ReporterUserId], map: "IX_UserReports_ReporterUserId")
+  @@index([ReviewedByUserId], map: "IX_UserReports_ReviewedByUserId")
+}
+
+model UserTokens {
+  Id             Int           @id(map: "PK_UserTokens") @default(autoincrement())
+  UserId         String        @db.Uuid
+  RefreshTokenId Int
+  AccessTokenId  Int
+  CreatedAt      DateTime      @db.Timestamptz(6)
+  LastUpdated    DateTime      @db.Timestamptz(6)
+  AccessTokens   AccessTokens  @relation(fields: [AccessTokenId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserTokens_AccessTokens_AccessTokenId")
+  RefreshTokens  RefreshTokens @relation(fields: [RefreshTokenId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserTokens_RefreshTokens_RefreshTokenId")
+  Users          Users         @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_UserTokens_Users_UserId")
+
+  @@index([AccessTokenId], map: "IX_UserTokens_AccessTokenId")
+  @@index([RefreshTokenId], map: "IX_UserTokens_RefreshTokenId")
+  @@index([UserId], map: "IX_UserTokens_UserId")
+}
+
+model Users {
+  Id                                                            String                      @id(map: "PK_Users") @db.Uuid
+  FirstName                                                     String?
+  LastName                                                      String?
+  Email                                                         String?
+  IsEmailVerified                                               Boolean
+  EmailVerificationDate                                         DateTime?                   @db.Timestamptz(6)
+  PhoneNo                                                       String?
+  IsPhoneVerified                                               Boolean
+  PhoneVerificationDate                                         DateTime?                   @db.Timestamptz(6)
+  CountryCode                                                   String?
+  Gender                                                        String?
+  Dob                                                           String?
+  Occupation                                                    String?
+  Education                                                     String?
+  SexualOrientation                                             String?
+  Bio                                                           String?
+  Height                                                        Decimal?                    @db.Decimal
+  ProfilePhoto1                                                 String?
+  ProfilePhoto2                                                 String?
+  ProfilePhoto3                                                 String?
+  ProfilePhoto4                                                 String?
+  ProfilePhoto5                                                 String?
+  ProfilePhotoKey1                                              String?
+  ProfilePhotoKey2                                              String?
+  ProfilePhotoKey3                                              String?
+  ProfilePhotoKey4                                              String?
+  ProfilePhotoKey5                                              String?
+  ProfilePhotoCdnUrl1                                           String?
+  ProfilePhotoCdnUrl2                                           String?
+  ProfilePhotoCdnUrl3                                           String?
+  ProfilePhotoCdnUrl4                                           String?
+  ProfilePhotoCdnUrl5                                           String?
+  PreferredGender                                               String?
+  PreferredAgeMin                                               Int
+  PreferredAgeMax                                               Int
+  RelationShipType                                              String?
+  Feedback                                                      String?
+  TimezoneId                                                    Int
+  IsBasicInfoFilled                                             Boolean
+  IsMatchPreferencesFilled                                      Boolean
+  IsHobbiesAndInterestsFilled                                   Boolean
+  IsVerificationCompleted                                       Boolean
+  IsFeedbackGiven                                               Boolean
+  ZodiacSign                                                    String?
+  SmokingHabit                                                  String?
+  DrinkingHabit                                                 String?
+  IsActiveInMatching                                            Boolean
+  MaxDistance                                                   Int
+  CurrentLatitude                                               Float?
+  CurrentLongitude                                              Float?
+  LocationUpdatedAt                                             DateTime?                   @db.Timestamptz(6)
+  IsVerified                                                    Boolean
+  IsAdmin                                                       Boolean  @default(false)
+  LocationCity                                                  String?
+  LocationCountry                                               String?
+  CreatedAt                                                     DateTime?                   @db.Timestamptz(6)
+  UpdatedAt                                                     DateTime?                   @db.Timestamptz(6)
+  PushNotificationsEnabled                                      Boolean
+  ContactMessages                                               ContactMessages[]
+  DemoRequests                                                  DemoRequests[]
+  EventCommentLikes                                             EventCommentLikes[]
+  EventCommentReactions                                         EventCommentReactions[]
+  EventComments                                                 EventComments[]
+  EventDiscoveryQueues_EventDiscoveryQueues_TargetUserIdToUsers EventDiscoveryQueues[]      @relation("EventDiscoveryQueues_TargetUserIdToUsers")
+  EventDiscoveryQueues_EventDiscoveryQueues_UserIdToUsers       EventDiscoveryQueues[]      @relation("EventDiscoveryQueues_UserIdToUsers")
+  EventMatchPreferences                                         EventMatchPreferences[]
+  EventMatches_EventMatches_User1IdToUsers                      EventMatches[]              @relation("EventMatches_User1IdToUsers")
+  EventMatches_EventMatches_User2IdToUsers                      EventMatches[]              @relation("EventMatches_User2IdToUsers")
+  EventPayouts                                                  EventPayouts[]
+  EventQuestionAnswers                                          EventQuestionAnswers[]
+  EventRsvps                                                    EventRsvps[]
+  EventSwipeActions_EventSwipeActions_SwipedUserIdToUsers       EventSwipeActions[]         @relation("EventSwipeActions_SwipedUserIdToUsers")
+  EventSwipeActions_EventSwipeActions_SwiperUserIdToUsers       EventSwipeActions[]         @relation("EventSwipeActions_SwiperUserIdToUsers")
+  Notifications                                                 Notifications[]
+  PrivateChatGroups_PrivateChatGroups_HostIdToUsers             PrivateChatGroups[]         @relation("PrivateChatGroups_HostIdToUsers")
+  PrivateChatGroups_PrivateChatGroups_UserIdToUsers             PrivateChatGroups[]         @relation("PrivateChatGroups_UserIdToUsers")
+  PurchasedTicketsQrs                                           PurchasedTicketsQrs[]
+  PushNotificationHistories                                     PushNotificationHistories[]
+  SharedTickets_SharedTickets_RedeemedByUserIdToUsers           SharedTickets[]             @relation("SharedTickets_RedeemedByUserIdToUsers")
+  SharedTickets_SharedTickets_SharedByUserIdToUsers             SharedTickets[]             @relation("SharedTickets_SharedByUserIdToUsers")
+  UserBlocks_UserBlocks_BlockedUserIdToUsers                    UserBlocks[]                @relation("UserBlocks_BlockedUserIdToUsers")
+  UserBlocks_UserBlocks_BlockerUserIdToUsers                    UserBlocks[]                @relation("UserBlocks_BlockerUserIdToUsers")
+  UserDeviceTokens                                              UserDeviceTokens[]
+  UserReports_UserReports_ReportedUserIdToUsers                 UserReports[]               @relation("UserReports_ReportedUserIdToUsers")
+  UserReports_UserReports_ReporterUserIdToUsers                 UserReports[]               @relation("UserReports_ReporterUserIdToUsers")
+  UserReports_UserReports_ReviewedByUserIdToUsers               UserReports[]               @relation("UserReports_ReviewedByUserIdToUsers")
+  UserTokens                                                    UserTokens[]
+  Timezones                                                     Timezones                   @relation(fields: [TimezoneId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Users_Timezones_TimezoneId")
+
+  @@index([TimezoneId], map: "IX_Users_TimezoneId")
+}
+
+model EFMigrationsHistory {
+  MigrationId    String @id(map: "PK___EFMigrationsHistory") @db.VarChar(150)
+  ProductVersion String @db.VarChar(32)
+
+  @@map("__EFMigrationsHistory")
+}

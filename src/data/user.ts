@@ -1,0 +1,28 @@
+import type { UserType } from "@/types"
+
+export const userData: UserType = {
+  id: "",
+  firstName: "Admin",
+  lastName: "User",
+  name: "Admin User",
+  password: "",
+  username: "admin",
+  role: "admin",
+  avatar: "",
+  background: "",
+  status: "ONLINE",
+  phoneNumber: "",
+  email: "",
+  state: "",
+  country: "",
+  address: "",
+  zipCode: "",
+  language: "en",
+  timeZone: "Asia/Kolkata",
+  currency: "INR",
+  organization: "",
+  twoFactorAuth: false,
+  loginAlerts: false,
+  connections: 0,
+  followers: 0,
+}
